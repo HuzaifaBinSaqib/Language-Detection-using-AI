@@ -1,0 +1,99 @@
+    from langid import classify
+from deep_translator import GoogleTranslator
+import speech_recognition as sr
+
+def detect_and_translate(text, target_language="en"):
+    """
+    Detects the language of the input text and translates it to the target language.
+
+    Parameters:
+        text (str): The input text to detect and translate.
+        target_language (str): The language code for the target language (default is 'en' for English).
+
+    Returns:
+        dict: A dictionary containing the detected language and the translated text.
+    """
+    try:
+        # Detect the language of the input text
+        detected_language, _ = classify(text)
+
+        # Translate the text using Deep Translator
+        translated_text = GoogleTranslator(source=detected_language, target=target_language).translate(text)
+
+        return {
+            'detected_language': detected_language,
+            'translated_text': translated_text
+        }
+
+    except Exception as e:
+        return {
+            'error': str(e)
+        }
+
+def get_audio_input(recognition_language):
+    """
+    Captures audio input from the user and converts it to text using speech recognition.
+
+    Parameters:
+        recognition_language (str): The language code for speech recognition (e.g., 'en-US' for English, 'fr-FR' for French).
+
+    Returns:
+        str: The recognized text from the audio input or an error message.
+    """
+    recognizer = sr.Recognizer()
+    with sr.Microphone() as source:
+        print(f"Please speak now in {recognition_language}...")
+        try:
+            # Listen to the audio input
+            audio = recognizer.listen(source, timeout=5, phrase_time_limit=10)
+            recognized_text = recognizer.recognize_google(audio, language=recognition_language)
+            print(f"You said: {recognized_text}")
+            return recognized_text
+        except sr.UnknownValueError:
+            print("Sorry, I could not understand the audio.")
+            return ""
+        except sr.RequestError as e:
+            print(f"Speech Recognition service error: {e}")
+            return ""
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+            return ""
+
+if __name__ == "__main__":
+    # Prompt user for the spoken language
+    language_name = input("Enter the language you will speak (e.g., English, French, Spanish): ").strip().lower()
+
+    # Mapping spoken language name to language codes for speech recognition
+    language_code_map = {
+        "english": "en-US",
+        "french": "fr-FR",
+        "spanish": "es-ES",
+        "german": "de-DE",
+        "hindi": "hi-IN",
+        "chinese": "zh-CN",
+        "arabic": "ar-SA",
+        # Add more mappings as needed
+    }
+
+    if language_name not in language_code_map:
+        print(f"Language '{language_name}' is not supported. Exiting...")
+    else:
+        recognition_lang = language_code_map[language_name]
+
+        # Capture audio input
+        input_text = get_audio_input(recognition_lang)
+
+        # If no valid audio input, exit the program
+        if not input_text:
+            print("No valid input detected. Exiting...")
+        else:
+            # Translate the input text to English
+            result = detect_and_translate(input_text)
+
+            # Display the results
+            if 'error' in result:
+                print(f"Error: {result['error']}")
+            else:
+                print(f"Detected Language: {result['detected_language']}")
+                print(f"Translated Text: {result['translated_text']}")
+
